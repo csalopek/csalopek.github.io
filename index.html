@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iron 5-Day Split</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased pb-12">
+
+    <div class="max-w-md mx-auto px-4 pt-6">
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-emerald-400">IRON SPLIT</h1>
+            </div>
+            <button onclick="resetTracker()" class="text-xs bg-gray-800 hover:bg-red-900 hover:text-red-200 text-gray-300 px-3 py-1.5 rounded-lg border border-gray-700 transition">
+                Reset Week
+            </button>
+        </header>
+
+        <div class="flex space-x-1 bg-gray-800 p-1 rounded-xl mb-6 overflow-x-auto scrollbar-none">
+            <button onclick="switchDay('mon')" id="tab-mon" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-gray-400">Mon</button>
+            <button onclick="switchDay('tue')" id="tab-tue" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-gray-400">Tue</button>
+            <button onclick="switchDay('wed')" id="tab-wed" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-gray-400">Wed</button>
+            <button onclick="switchDay('thu')" id="tab-thu" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-gray-400">Thu</button>
+            <button onclick="switchDay('fri')" id="tab-fri" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-gray-400">Fri</button>
+            <button onclick="switchDay('stats')" id="tab-stats" class="tab-btn flex-1 text-center py-2 text-sm font-semibold rounded-lg transition duration-200 text-blue-400 border-l border-gray-700 ml-1 pl-1">Stats</button>
+        </div>
+
+        <main id="workout-content"></main>
+    </div>
+
+    <script>
+        const workouts = {
+            mon: { title: "Upper Body (Strength)", exercises: [ { name: "Incline Barbell Bench Press", sets: "4 x 5-8" }, { name: "Weighted Pull-Ups / Lat Pulldown", sets: "4 x 6-8" }, { name: "Overhead Barbell/Dumbbell Press", sets: "3 x 6-8" }, { name: "Barbell Bent-Over Rows", sets: "3 x 6-8" }, { name: "Weighted Dips", sets: "3 x 8-10" } ] },
+            tue: { title: "Lower Body (Strength)", exercises: [ { name: "Barbell Back Squats", sets: "4 x 5-8" }, { name: "Romanian Deadlifts (RDLs)", sets: "4 x 6-8" }, { name: "Leg Press", sets: "3 x 8-10" }, { name: "Standing Calf Raises", sets: "4 x 10-12" }, { name: "Weighted Cable Crunches", sets: "3 x 12-15" } ] },
+            wed: { title: "Push (Hypertrophy)", exercises: [ { name: "Flat Dumbbell Bench Press", sets: "3 x 8-12" }, { name: "Seated Dumbbell Shoulder Press", sets: "3 x 8-12" }, { name: "Cable Crossovers / Pec Deck", sets: "3 x 12-15" }, { name: "Lateral Raises (DB or Cable)", sets: "4 x 12-15" }, { name: "Tricep Rope Pushdowns", sets: "3 x 10-15" }, { name: "Overhead Tricep Extension", sets: "3 x 10-12" } ] },
+            thu: { title: "Pull (Hypertrophy)", exercises: [ { name: "Seated Cable Rows", sets: "3 x 8-12" }, { name: "Single-Arm Dumbbell Rows", sets: "3 x 8-12" }, { name: "Face Pulls", sets: "4 x 15" }, { name: "Dumbbell Hammer Curls", sets: "3 x 10-12" }, { name: "EZ Bar Preacher Curls", sets: "3 x 10-12" }, { name: "Hanging Leg Raises", sets: "3 to failure" } ] },
+            fri: { title: "Legs & Core (Hypertrophy)", exercises: [ { name: "Bulgarian Split Squats / Lunges", sets: "3 x 8-12 per leg" }, { name: "Leg Extensions", sets: "3 x 12-15" }, { name: "Seated or Lying Leg Curls", sets: "3 x 12-15" }, { name: "Seated Calf Raises", sets: "3 x 15-20" }, { name: "Planks", sets: "3 x 60s" } ] }
+        };
+
+        let currentDay = 'mon';
+
+        function getSavedData(dayKey, index) {
+            const stored = localStorage.getItem(`${dayKey}-ex-${index}`);
+            return stored ? JSON.parse(stored) : { completed: false, weight: '', reps: '' };
+        }
+
+        function renderWorkout(dayKey) {
+            const container = document.getElementById('workout-content');
+            const data = workouts[dayKey];
+            
+            let html = `
+                <div class="bg-gray-800 rounded-2xl p-5 border border-gray-700/50 shadow-xl">
+                    <h2 class="text-lg font-bold text-white mb-4 tracking-tight border-b border-gray-700 pb-2">${data.title}</h2>
+                    <div class="space-y-4">
+            `;
+
+            data.exercises.forEach((ex, index) => {
+                const saved = getSavedData(dayKey, index);
+                const isChecked = saved.completed ? 'checked' : '';
+                const textStyle = saved.completed ? 'text-emerald-400 line-through opacity-80' : 'text-gray-200';
+                const cardStyle = saved.completed ? 'bg-gray-900/50 border-emerald-900/50' : 'bg-gray-700/30 border-gray-700/50';
+
+                html += `
+                    <div class="p-4 rounded-xl border ${cardStyle} transition duration-150">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-sm font-medium ${textStyle} pr-2">${ex.name}</span>
+                            <span class="text-[10px] uppercase tracking-wider font-bold bg-gray-800 px-2 py-1 rounded text-gray-400 whitespace-nowrap border border-gray-700/60">${ex.sets}</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-1 flex space-x-2">
+                                <input type="number" placeholder="Lbs" value="${saved.weight}" onchange="updateData('${dayKey}', ${index}, 'weight', this.value)" class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none">
+                                <input type="number" placeholder="Reps" value="${saved.reps}" onchange="updateData('${dayKey}', ${index}, 'reps', this.value)" class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none">
+                            </div>
+                            <label class="flex items-center justify-center w-10 h-10 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer">
+                                <input type="checkbox" ${isChecked} onchange="updateData('${dayKey}', ${index}, 'completed', this.checked)" class="w-5 h-5 rounded text-emerald-500 bg-transparent border-none focus:ring-0 focus:ring-offset-0">
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderStats() {
+            const container = document.getElementById('workout-content');
+            let history = JSON.parse(localStorage.getItem('weightHistory') || '[]');
+            
+            let html = `
+                <div class="bg-gray-800 rounded-2xl p-5 border border-gray-700/50 shadow-xl mb-4">
+                    <h2 class="text-lg font-bold text-blue-400 mb-4 tracking-tight border-b border-gray-700 pb-2">Log Weekly Weight</h2>
+                    <div class="flex space-x-3">
+                        <input type="number" id="new-weight" placeholder="Enter weight (lbs)" class="flex-1 bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 focus:border-blue-500 outline-none">
+                        <button onclick="logWeight()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg transition">Save</button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-2xl p-5 border border-gray-700/50 shadow-xl">
+                    <h2 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">Weight History</h2>
+                    <div class="space-y-2">
+            `;
+
+            if (history.length === 0) {
+                html += `<p class="text-sm text-gray-500 italic">No weigh-ins logged yet.</p>`;
+            } else {
+                // Show newest first
+                history.slice().reverse().forEach(entry => {
+                    html += `
+                        <div class="flex justify-between items-center bg-gray-900 p-3 rounded-lg border border-gray-700">
+                            <span class="text-gray-300 text-sm">${entry.date}</span>
+                            <span class="text-white font-bold">${entry.weight} lbs</span>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function logWeight() {
+            const input = document.getElementById('new-weight');
+            const weight = input.value;
+            if (!weight) return;
+
+            let history = JSON.parse(localStorage.getItem('weightHistory') || '[]');
+            const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            history.push({ date: today, weight: weight });
+            localStorage.setItem('weightHistory', JSON.stringify(history));
+            
+            renderStats(); // Refresh view
+        }
+
+        function updateData(dayKey, index, field, value) {
+            const saved = getSavedData(dayKey, index);
+            saved[field] = value;
+            localStorage.setItem(`${dayKey}-ex-${index}`, JSON.stringify(saved));
+            if (field === 'completed') renderWorkout(dayKey); 
+        }
+
+        function switchDay(tabKey) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-500', 'text-gray-950', 'bg-blue-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-gray-400');
+            });
+            
+            const activeTab = document.getElementById(`tab-${tabKey}`);
+            activeTab.classList.remove('text-gray-400');
+            
+            if (tabKey === 'stats') {
+                activeTab.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                renderStats();
+            } else {
+                activeTab.classList.add('bg-emerald-500', 'text-gray-950', 'shadow-md');
+                renderWorkout(tabKey);
+            }
+            
+            currentDay = tabKey;
+        }
+
+        function resetTracker() {
+            if(confirm("Are you sure you want to clear all workout data for the week? (Your weight history will NOT be deleted).")) {
+                // Only delete keys that contain '-ex-' (workout data)
+                Object.keys(localStorage).forEach(key => {
+                    if(key.includes('-ex-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                if(currentDay === 'stats') switchDay('mon');
+                else renderWorkout(currentDay);
+            }
+        }
+
+        // Init
+        const dayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const todayStr = dayMap[new Date().getDay()];
+        if (workouts[todayStr]) currentDay = todayStr;
+        switchDay(currentDay);
+    </script>
+</body>
+</html>
